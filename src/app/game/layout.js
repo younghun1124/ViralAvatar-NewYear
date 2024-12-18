@@ -1,6 +1,6 @@
 export default function GameLayout({ children }) {
   return (
-    <div className="game-layout">
+    <div className="game-layout bg-white min-h-screen">
       {children}
     </div>
   )

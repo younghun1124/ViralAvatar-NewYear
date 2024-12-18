@@ -14,6 +14,7 @@ function GameComponent() {
         type: Phaser.AUTO,
         width: 800,
         height: 600,
+        backgroundColor: '#ffffff',
         physics: {
           default: 'matter',
           matter: {
@@ -45,33 +46,35 @@ function GameComponent() {
       }
 
       function create() {
-        // 종 생성
+        // 종 생성 - 검정색으로 변경
         bell = this.matter.add.image(400, 300, 'bell')
         bell.setStatic(true)
         bell.setScale(0.5)
+        bell.setTint(0x000000)  // 검정색 틴트 추가
 
-        // 종을 치는 striker 생성
+        // 종을 치는 striker 생성 - 검정색으로 변경
         striker = this.matter.add.image(400, 100, 'striker')
         striker.setScale(0.3)
         striker.setBounce(0.8)
         striker.setInteractive()
+        striker.setTint(0x000000)  // 검정색 틴트 추가
 
-        // 시간 텍스트
+        // 시간 텍스트 - 검정색으로 변경
         timeText = this.add.text(16, 16, '시간: 10.00', {
           fontSize: '32px',
-          fill: '#fff'
+          fill: '#000'  // 검정색으로 변경
         })
 
-        // 점수 텍스트
+        // 점수 텍스트 - 검정색으로 변경
         scoreText = this.add.text(16, 56, '점수: 0', {
           fontSize: '32px',
-          fill: '#fff'
+          fill: '#000'  // 검정색으로 변경
         })
 
-        // 게임 시작 버튼
+        // 게임 시작 버튼 - 검정색으로 변경
         const startButton = this.add.text(400, 500, '게임 시작', {
           fontSize: '32px',
-          fill: '#fff'
+          fill: '#000'  // 검정색으로 변경
         })
         .setOrigin(0.5)
         .setInteractive()
