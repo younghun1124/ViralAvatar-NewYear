@@ -7,8 +7,17 @@ function GameComponent() {
   const [gameInstance, setGameInstance] = useState(null)
 
   useEffect(() => {
+    // 이미 게임 인스턴스가 있다면 초기화하지 않음
+    if (gameInstance) return;
+
     const initPhaser = async () => {
       const Phaser = (await import('phaser')).default
+      
+      // 기존 게임 캔버스가 있다면 제거
+      const existingCanvas = document.querySelector('canvas');
+      if (existingCanvas) {
+        existingCanvas.remove();
+      }
       
       const config = {
         type: Phaser.AUTO,
@@ -27,7 +36,7 @@ function GameComponent() {
           create: create,
           update: update
         },
-        parent: 'game-container' // 게임이 렌더링될 div의 ID
+        parent: 'phaser-game' // ID 변경
       }
 
       let bell
@@ -53,11 +62,78 @@ function GameComponent() {
         bell.setTint(0x000000)  // 검정색 틴트 추가
 
         // 종을 치는 striker 생성 - 검정색으로 변경
-        striker = this.matter.add.image(400, 100, 'striker')
+        striker = this.matter.add.image(400, 500, 'striker')  // 시작 위치를 아래쪽으로 변경
         striker.setScale(0.3)
         striker.setBounce(0.8)
-        striker.setInteractive()
-        striker.setTint(0x000000)  // 검정색 틴트 추가
+        striker.setInteractive({ draggable: true })  // 드래그 가능하도록 설정
+        striker.setTint(0x000000)
+        
+        // 드래그 시작점 저장용 변수
+        let dragStartPosition = null
+        
+        // 드래그 시작
+        this.input.on('dragstart', (pointer, gameObject) => {
+          if (gameObject === striker) {
+            dragStartPosition = { x: striker.x, y: striker.y }
+            striker.setStatic(true)  // 드래그 중에는 정적으로 설정
+          }
+        })
+
+        // 드래그 중
+        this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+          if (gameObject === striker) {
+            // 드래그 거리 제한
+            const maxDragDistance = 150
+            const dx = dragX - dragStartPosition.x
+            const dy = dragY - dragStartPosition.y
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            
+            if (distance > maxDragDistance) {
+              const angle = Math.atan2(dy, dx)
+              dragX = dragStartPosition.x + Math.cos(angle) * maxDragDistance
+              dragY = dragStartPosition.y + Math.sin(angle) * maxDragDistance
+            }
+            
+            // 드래그 방향 제한 (위쪽으로만)
+            if (dragY > dragStartPosition.y) {
+              dragY = dragStartPosition.y
+            }
+            
+            striker.setPosition(dragX, dragY)
+            
+            // 시각적 피드백을 위한 라인 그리기 (있다면 기존 라인 삭제)
+            if (this.dragLine) this.dragLine.destroy()
+            this.dragLine = this.add.line(
+              0, 0,
+              dragStartPosition.x, dragStartPosition.y,
+              striker.x, striker.y,
+              0x000000
+            ).setOrigin(0, 0)
+          }
+        })
+
+        // 드래그 종료
+        this.input.on('dragend', (pointer, gameObject) => {
+          if (gameObject === striker) {
+            striker.setStatic(false)  // 물리 효과 다시 활성화
+            
+            // 당긴 거리에 비례하여 힘 계산
+            const dx = dragStartPosition.x - striker.x
+            const dy = dragStartPosition.y - striker.y
+            const force = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.1, 15)
+            
+            // 반대 방향으로 힘 적용
+            striker.setVelocity(dx * force, dy * force)
+            
+            // 라인 제거
+            if (this.dragLine) {
+              this.dragLine.destroy()
+              this.dragLine = null
+            }
+            
+            dragStartPosition = null
+          }
+        })
 
         // 시간 텍스트 - 검정색으로 변경
         timeText = this.add.text(16, 16, '시간: 10.00', {
@@ -93,10 +169,17 @@ function GameComponent() {
       }
 
       function update() {
-        // striker를 마우스 위치로 이동
-        if (!gameEnded) {
-          striker.setPosition(this.input.x, this.input.y)
+        // striker가 화면 아래로 벗어나면 원위치
+        if (striker.y > 800 || striker.x < 0 || striker.x > 800) {
+          resetStriker()
         }
+      }
+
+      // striker 리셋 함수
+      function resetStriker() {
+        striker.setPosition(400, 500)  // 초기 위치로
+        striker.setVelocity(0, 0)     // 속도 초기화
+        striker.setAngularVelocity(0)  // 회전 속도 초기화
       }
 
       function startGame() {
@@ -141,7 +224,7 @@ function GameComponent() {
         }
       }
 
-      // 게임 인스턴스 생성 및 저장
+      // 게임 인스턴스 생�� 및 저장
       const game = new Phaser.Game(config)
       setGameInstance(game)
     }
@@ -152,12 +235,13 @@ function GameComponent() {
     return () => {
       if (gameInstance) {
         gameInstance.destroy(true)
+        setGameInstance(null)
       }
     }
-  }, []) // 빈 의존성 배열
+  }, [gameInstance]) // gameInstance를 의존성 배열에 추가
 
   return (
-    <div id="game-container" />
+    <div id="phaser-game" /> // ID 변경
   )
 }
 
